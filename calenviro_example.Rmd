@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r, echo=FALSE, include=FALSE, warning=FALSE}
 #libraries
 library(tidyverse)
 library(readxl)
@@ -19,25 +19,21 @@ library(reactable)
 
 Data extracted from OEHHA, https://oehha.ca.gov/calenviroscreen/report/calenviroscreen-40, "CalEnviroScreen 4.0 Excel and Data Dictionary PDF"
 
-```{r}
+```{r, echo=FALSE, include=FALSE, warning=FALSE}
 enviro <- read_excel("data/calenviroscreen40resultsdatadictionary_F_2021.xlsx", sheet = 1, na = "---") 
 demog <- read_excel("data/calenviroscreen40resultsdatadictionary_F_2021.xlsx", sheet = 2, na = "---") 
 #view(data)
 ```
 
 
-```{r}
+```{r, echo=FALSE, include=FALSE, warning=FALSE}
 #removed first row which states "Demographic data (total population, age groups and race/ethnicity) by census tract were extracted from the 2019 American Community Survey."
 demog_clean <- demog %>% 
   rename_with( ~ tolower(gsub(" ", "", .x, fixed = TRUE)))%>%
-  rename(county=californiacounty) %>%
-  group_by(county)%>% 
-  drop_na()
-
-#dropping NAs which impacts counties: LA, San Diego, Riverside, San Bernardino, San Mateo, Santa Barbara, Solano, Monterey, 
+  rename(county=californiacounty)
 ```
 
-```{r}
+```{r, echo=FALSE, include=FALSE, warning=FALSE}
 #demographics by county
 demog_clean_county <- demog_clean %>%
   group_by(county) %>% 
@@ -54,7 +50,7 @@ demog_clean_county <- demog_clean %>%
   arrange(desc(totalpop))
 ```
 
-```{r}
+```{r, echo=FALSE, warning=FALSE}
 #in table format
 kable(demog_clean_county,
       booktabs = T,
@@ -64,7 +60,7 @@ kable(demog_clean_county,
   kable_styling(full_width = T)
 ```
 
-```{r}
+```{r, echo=FALSE, include=FALSE, warning=FALSE}
 #clean data
 enviro_clean <- enviro %>% 
   rename_with( ~ tolower(gsub(" ", "", .x, fixed = TRUE)))%>%
@@ -73,65 +69,62 @@ enviro_clean <- enviro %>%
          education = as.numeric(education),
          linguisticisolation = as.numeric(linguisticisolation),
          unemployment = as.numeric(unemployment),
-         housingburden = as.numeric(housingburden)) %>%
-  drop_na(`ces4.0score`)
+         housingburden = as.numeric(housingburden),
+         weight = totalpopulation/sum(totalpopulation)) #%>%
+  #drop_na(`ces4.0score`)
   
 #I only drop NA values for ces4.0 score. 1965 NA values before drop, 720 remain
 #review of other missing values: counties with no NAs for lowbirthweight (29); education (42), linguisticisolation (15), unemployment (12), housing (37), poverty (57). Only 5 counties have a complete data set for the chosen variables after dropping NAs for ces4.0score
 ```
 
-```{r}
+```{r, echo=FALSE, include=FALSE, warning=FALSE}
 #enviro_clean grouped by county
 enviro_clean_county <- enviro_clean %>%
   group_by(county)%>%
   summarize(totalpop = sum(totalpopulation),
-            avg_ces_score = mean(`ces4.0score`),
-            avg_pollutionburden = mean(pollutionburden),
-            avg_asthma = mean(asthma),
-            avg_lowbirthweight = mean(lowbirthweight),
-            avg_cvd = mean(cardiovasculardisease),
-            avg_education = mean(education),
-            avg_lingisolation = mean(linguisticisolation),
-            avg_poverty = mean(poverty),
-            avg_unemployment = mean(unemployment),
-            avg_housingburden = mean(housingburden)
+            #avg_ces_score = weighted.mean(`ces4.0score`, weight),
+            avg_pollutionburden = weighted.mean(pollutionburden, weight),
+            avg_asthma = weighted.mean(asthma, weight),
+            avg_lowbirthweight = weighted.mean(lowbirthweight, weight),
+            avg_cvd = weighted.mean(cardiovasculardisease, weight),
+            avg_education = weighted.mean(education, weight),
+            avg_lingisolation = weighted.mean(linguisticisolation, weight),
+            avg_poverty = weighted.mean(poverty, weight),
+            avg_unemployment = weighted.mean(unemployment, weight),
+            avg_housingburden = weighted.mean(housingburden, weight)
             )
-
 ```
 
-```{r} 
+```{r, echo=FALSE} 
 kable(enviro_clean_county,
       booktabs = T,
       caption = "Selected Health Concerns, related Environmental and Social Factors, by California County") %>%
   footnote(general = "OEHHA",
            general_title = "Data Source") %>%
   kable_styling(full_width = T)
+
+#note - total population in demog_clean_county and enviro_clean_county are not the same. For example, LA county in demog_clean_county is 10081570 and in enviro_clean_county it is 10040912. This is due to the removal of NA values I think
 ```
 
 
-```{r}
+
+```{r, echo=FALSE, include=FALSE, warning=FALSE}
 #Explore asthma and related risk factors & associated illness
+
 enviro_clean_asthma <- enviro_clean %>%
-  select(county, totalpopulation, `ces4.0score`, `pm2.5`, dieselpm, pesticides, traffic, pollutionburden, asthma, cardiovasculardisease, poverty, housingburden) %>% 
+  select(county, totalpopulation, `ces4.0score`, `pm2.5`, dieselpm, pesticides, traffic, pollutionburden, asthma, cardiovasculardisease, poverty, housingburden, weight) %>% 
   group_by(county) %>% 
   summarize(totalpop = sum(totalpopulation), 
-            avg_ces_score = mean(`ces4.0score`),
-            avg_pm2.5 = mean(`pm2.5`),
-            avg_diesel = mean(dieselpm),
-            avg_pesticides = mean(pesticides),
-            avg_traffic = mean(traffic),
-            avg_pollutionburden = mean(pollutionburden),
-            avg_asthma = mean(asthma),
-            avg_cvd = mean(cardiovasculardisease),
-            avg_poverty = mean(poverty))
-
-kable(enviro_clean_asthma,
-      booktabs = T,
-      caption = "Asthma and CVD rates, related environmental risks, by California County") %>%
-  footnote(general = "OEHHA",
-           general_title = "Data Source") %>%
-  kable_styling(full_width = T)
-  
+            #avg_ces_score = round(weighted.mean(`ces4.0score`, weight),2),
+            avg_pm2.5 = round(weighted.mean(`pm2.5`, weight),2),
+            avg_diesel = round(weighted.mean(dieselpm, weight),2),
+            avg_pesticides = round(weighted.mean(pesticides, weight),2),
+            avg_traffic = round(weighted.mean(traffic, weight),2),
+            avg_pollutionburden = round(weighted.mean(pollutionburden, weight),2),
+            avg_asthma = round(weighted.mean(asthma, weight),2),
+            avg_cvd = round(weighted.mean(cardiovasculardisease, weight),2),
+            avg_poverty = round(weighted.mean(poverty, weight),2)
+            )
 ```
 
 ```{r}
