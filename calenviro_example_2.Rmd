@@ -21,6 +21,20 @@ library(plotly)
 
 Data extracted from OEHHA, https://oehha.ca.gov/calenviroscreen/report/calenviroscreen-40, "CalEnviroScreen 4.0 Excel and Data Dictionary PDF"
 
+```{r, include=FALSE, echo=FALSE}
+#does ces score associate with a county's rural status?
+#https://www.rcrcnet.org/counties
+rural_counties <- c("Alpine", "Amador", "Butte", "Calaveras", "Colusa", 
+                    "Del Norte", "El Dorado", "Glenn", "Humboldt", "Imperial", 
+                    "Inyo", "Kings", "Lake", "Lassen", "Madera", 
+                    "Mariposa", "Mendocino", "Merced", "Modoc", "Mono", 
+                    "Monterey", "Napa", "Nevada", "Placer", "Plumas", 
+                    "San Benito", "San Luis Obispo", "Santa Barbara", "Shasta", 
+                    "Sierra", "Siskiyou", "Solano", "Sonoma", "Sutter", 
+                    "Tehama", "Trinity", "Tulare", "Tuolumne", "Yolo",
+                    "Yuba")
+```
+
 ```{r, echo=FALSE, include=FALSE, warning=FALSE}
 enviro <- read_excel("data/calenviroscreen40resultsdatadictionary_F_2021.xlsx", sheet = 1, na = "---") 
 demog <- read_excel("data/calenviroscreen40resultsdatadictionary_F_2021.xlsx", sheet = 2, na = "---") 
@@ -54,32 +68,18 @@ kable(enviro_clean_county,
   kable_styling(full_width = T)
 ```
 
-```{r, echo=FALSE} 
+```{r, echo=FALSE, warning=FALSE} 
 #how much is poverty associated with ces4.0 score? 
 ggplot(data=enviro_clean_county, aes(x=avg_ces_score, y=avg_poverty))+
   geom_point()+
-  geom_smooth()
+  geom_smooth(formula=y~x, method="loess")
 ```
 
-
-```{r}
-#does ces score associate with a county's rural status?
-#https://www.rcrcnet.org/counties
-rural_counties <- c("Alpine", "Amador", "Butte", "Calaveras", "Colusa", 
-                    "Del Norte", "El Dorado", "Glenn", "Humboldt", "Imperial", 
-                    "Inyo", "Kings", "Lake", "Lassen", "Madera", 
-                    "Mariposa", "Mendocino", "Merced", "Modoc", "Mono", 
-                    "Monterey", "Napa", "Nevada", "Placer", "Plumas", 
-                    "San Benito", "San Luis Obispo", "Santa Barbara", "Shasta", 
-                    "Sierra", "Siskiyou", "Solano", "Sonoma", "Sutter", 
-                    "Tehama", "Trinity", "Tulare", "Tuolumne", "Yolo",
-                    "Yuba")
-```
-
-```{r}
+```{r, echo=FALSE}
 enviro_clean_rural <- enviro_clean %>% 
   group_by(county)%>% 
-  summarize(avg_ces_score_co = weighted.mean(`ces4.0score`, totalpopulation, na.rm = T),
+  summarize(tot_pop = sum(totalpopulation, na.rm = T), 
+            avg_ces_score_co = weighted.mean(`ces4.0score`, totalpopulation, na.rm = T),
             avg_poverty_co = weighted.mean(poverty, totalpopulation, na.rm = T)
                             )   %>%
   mutate(rural = if_else(county %in% rural_counties, "rural", "not rural"))%>%
@@ -88,29 +88,31 @@ enviro_clean_rural$rural <- as.factor(enviro_clean_rural$rural)
 ```
 
 
-```{r}
-rural_plot_1 <- ggplot(enviro_clean_rural, aes(x=rural, y=avg_ces_score_co)) +
+```{r, echo=FALSE}
+rural_plot_1 <- ggplot(enviro_clean_rural, aes(x=rural, y=avg_ces_score_co, fill=rural)) +
   geom_boxplot() +
   labs(title = "Distribution of ces4.0 scores by rural county status") 
 
-ggplotly(rural_plot_1)
+ggplotly(rural_plot_1, tooltip = "text") %>% layout(showlegend=FALSE)
 
 #consider removing outliers (40+) from rural counties
 ```
 
-```{r}
-rural_plot_2 <- ggplot(enviro_clean_rural, aes(x=rural, y=avg_poverty_co)) +
+```{r, echo=FALSE, warning=FALSE}
+rural_plot_2 <- ggplot(enviro_clean_rural, aes(x=rural, y=avg_poverty_co, fill=rural)) +
   geom_boxplot() +
   labs(title = "Distribution of poverty by rural county status") 
 
-ggplotly(rural_plot_2)
+ggplotly(rural_plot_2, tooltip= "text")
 ```
 
 
-```{r}
+```{r, echo=FALSE, warning=FALSE}
 rural_plot_3 <- ggplot(data=enviro_clean_rural, aes(x=avg_ces_score_co, y= avg_poverty_co, color=rural, label=county))+
-  geom_point()+
-  geom_smooth()
+  geom_point(aes(size=tot_pop))+
+  geom_smooth(formula=y~x, method="loess")+
+  theme_minimal()
+  
 #more difference among counties that are non-rural. there is less difference in rural areas ces scores across counties.
 
 ggplotly(rural_plot_3)
