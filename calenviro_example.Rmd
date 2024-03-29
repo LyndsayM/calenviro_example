@@ -69,8 +69,7 @@ enviro_clean <- enviro %>%
          education = as.numeric(education),
          linguisticisolation = as.numeric(linguisticisolation),
          unemployment = as.numeric(unemployment),
-         housingburden = as.numeric(housingburden),
-         weight = totalpopulation/sum(totalpopulation)) #%>%
+         housingburden = as.numeric(housingburden)) #%>%
   #drop_na(`ces4.0score`)
   
 #I only drop NA values for ces4.0 score. 1965 NA values before drop, 720 remain
@@ -83,15 +82,15 @@ enviro_clean_county <- enviro_clean %>%
   group_by(county)%>%
   summarize(totalpop = sum(totalpopulation),
             #avg_ces_score = weighted.mean(`ces4.0score`, weight),
-            avg_pollutionburden = weighted.mean(pollutionburden, weight),
-            avg_asthma = weighted.mean(asthma, weight),
-            avg_lowbirthweight = weighted.mean(lowbirthweight, weight),
-            avg_cvd = weighted.mean(cardiovasculardisease, weight),
-            avg_education = weighted.mean(education, weight),
-            avg_lingisolation = weighted.mean(linguisticisolation, weight),
-            avg_poverty = weighted.mean(poverty, weight),
-            avg_unemployment = weighted.mean(unemployment, weight),
-            avg_housingburden = weighted.mean(housingburden, weight)
+            avg_pollutionburden = weighted.mean(pollutionburden, totalpopulation, na.rm=T),
+            avg_asthma = weighted.mean(asthma, totalpopulation, na.rm = T),
+            avg_lowbirthweight = weighted.mean(lowbirthweight, totalpopulation, na.rm=T),
+            avg_cvd = weighted.mean(cardiovasculardisease, totalpopulation, na.rm=T),
+            avg_education = weighted.mean(education, totalpopulation, na.rm=T),
+            avg_lingisolation = weighted.mean(linguisticisolation, totalpopulation, na.rm=T),
+            avg_poverty = weighted.mean(poverty, totalpopulation, na.rm = T),
+            avg_unemployment = weighted.mean(unemployment, totalpopulation, na.rm=T),
+            avg_housingburden = weighted.mean(housingburden, totalpopulation, na.rm=T)
             )
 ```
 
@@ -112,18 +111,18 @@ kable(enviro_clean_county,
 #Explore asthma and related risk factors & associated illness
 
 enviro_clean_asthma <- enviro_clean %>%
-  select(county, totalpopulation, `ces4.0score`, `pm2.5`, dieselpm, pesticides, traffic, pollutionburden, asthma, cardiovasculardisease, poverty, housingburden, weight) %>% 
+  select(county, totalpopulation, `ces4.0score`, `pm2.5`, dieselpm, pesticides, traffic, pollutionburden, asthma, cardiovasculardisease, poverty, housingburden) %>% 
   group_by(county) %>% 
   summarize(totalpop = sum(totalpopulation), 
             #avg_ces_score = round(weighted.mean(`ces4.0score`, weight),2),
-            avg_pm2.5 = round(weighted.mean(`pm2.5`, weight),2),
-            avg_diesel = round(weighted.mean(dieselpm, weight),2),
-            avg_pesticides = round(weighted.mean(pesticides, weight),2),
-            avg_traffic = round(weighted.mean(traffic, weight),2),
-            avg_pollutionburden = round(weighted.mean(pollutionburden, weight),2),
-            avg_asthma = round(weighted.mean(asthma, weight),2),
-            avg_cvd = round(weighted.mean(cardiovasculardisease, weight),2),
-            avg_poverty = round(weighted.mean(poverty, weight),2)
+            avg_pm2.5 = round(weighted.mean(`pm2.5`, totalpopulation),2),
+            avg_diesel = round(weighted.mean(dieselpm, totalpopulation),2),
+            avg_pesticides = round(weighted.mean(pesticides, totalpopulation),2),
+            avg_traffic = round(weighted.mean(traffic, totalpopulation),2),
+            avg_pollutionburden = round(weighted.mean(pollutionburden, totalpopulation),2),
+            avg_asthma = round(weighted.mean(asthma, totalpopulation),2),
+            avg_cvd = round(weighted.mean(cardiovasculardisease, totalpopulation),2),
+            avg_poverty = round(weighted.mean(poverty, totalpopulation),2)
             )
 ```
 
