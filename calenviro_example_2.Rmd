@@ -1,7 +1,7 @@
 ---
-title: "Making Visualizations with Cal Enviroscreen"
+title: "Making Visualizations with Cal Enviroscreen 4.0"
 author: "Lyndsay Miles"
-date: "`r format(Sys.time(), '%d %B, %Y')`"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: html_document
 ---
 
@@ -19,7 +19,11 @@ library(ggplot2)
 library(plotly)
 ```
 
-Data extracted from OEHHA, https://oehha.ca.gov/calenviroscreen/report/calenviroscreen-40, "CalEnviroScreen 4.0 Excel and Data Dictionary PDF"
+I found it valuable as an MPH student to work with manageable, real-world data sets as I got more comfortable using R. By manageable I mean the data set is large enough to be interesting but not so big to be overwhelming, has good documentation, and data that requires some but not a lot of data cleansing. It was also very important to me that the data could be used to develop meaningful insights of an existing population.
+
+CalEnviroScreen 4.0 is one of these data sets for me. I worked with it during my practicum experience, then as a TA supporting students on class projects, and as a student in a data visualization course. It is rich in key environmental and social indicators related to health in the state of California. It is an approachable data set useful for creating visualizations that are empowering and inspiring for the new R user.
+
+Here are a few examples of data visualizations I created looking at just couple of variables.
 
 ```{r, include=FALSE, echo=FALSE}
 #does ces score associate with a county's rural status?
@@ -41,7 +45,6 @@ demog <- read_excel("data/calenviroscreen40resultsdatadictionary_F_2021.xlsx", s
 #view(data)
 ```
 
-
 ```{r, echo=FALSE, include=FALSE, warning=FALSE}
 #clean data
 enviro_clean <- enviro %>% 
@@ -59,21 +62,31 @@ enviro_clean_county <- enviro_clean %>%
             avg_ces_score = weighted.mean(`ces4.0score`, totalpopulation, na.rm = T),
             avg_poverty = weighted.mean(poverty, totalpopulation, na.rm = T)
             )
-
-kable(enviro_clean_county,
-      booktabs = T,
-      caption = "CES 4.0 Score by County") %>%
-  footnote(general = "OEHHA",
-           general_title = "Data Source") %>%
-  kable_styling(full_width = T)
 ```
 
-```{r, echo=FALSE, warning=FALSE} 
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 #how much is poverty associated with ces4.0 score? 
-ggplot(data=enviro_clean_county, aes(x=avg_ces_score, y=avg_poverty))+
+scatter <- ggplot(data=enviro_clean_county, 
+                  aes(
+                    x=avg_ces_score, 
+                    y=avg_poverty,
+                    text = paste("\nCounty:", county)))+
   geom_point()+
-  geom_smooth(formula=y~x, method="loess")
+  geom_smooth(aes(group=1))+
+  labs(title = "CES 4.0 score and poverty by California county",
+       x = "Average CES 4.0 score",
+       y = "Average poverty (%)")+
+  theme_bw()
+
+scatter_interactive <- ggplotly(scatter) #%>% 
+  #style(hoverlabel = text) %>% 
+  #layout(xaxis=list(fixedrange=TRUE), yaxis = list(fixedrange = TRUE)) %>% 
+  #config(displayModeBar= FALSE, showTips = FALSE)
+
+scatter_interactive
 ```
+
+1.  **Scatter plot - Average CES 4.0 score and percentage of population living in poverty:** I grouped by county and then calculated population, mean CES 4.0 score, and mean poverty (%), weighted for population count. To calculate the CES 4.0 score, CalEnviroScreen 4.0 uses 20 different indicators to rank each census tract by its cumulative pollution burden and associated social vulnerabilities (e.g., poverty, education level) that put the population at risk. A higher score indicates higher risk to health concerns due to these pollutants and social indicators. Poverty is defined as the percent of population living below two times the federal poverty level (OEHHA, 2021).
 
 ```{r, echo=FALSE}
 enviro_clean_rural <- enviro_clean %>% 
@@ -87,34 +100,104 @@ enviro_clean_rural <- enviro_clean %>%
 enviro_clean_rural$rural <- as.factor(enviro_clean_rural$rural)
 ```
 
-
-```{r, echo=FALSE}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 rural_plot_1 <- ggplot(enviro_clean_rural, aes(x=rural, y=avg_ces_score_co, fill=rural)) +
   geom_boxplot() +
-  labs(title = "Distribution of ces4.0 scores by rural county status") 
+  labs(title = "Distribution of CES 4.0 scores by rural county status",
+       x = "",
+       y= "Average CES 4.0 score") +
+  scale_fill_manual(values = c("#69b3a2", "gold"))+
+  theme_bw()
 
-ggplotly(rural_plot_1, tooltip = "text") %>% layout(showlegend=FALSE)
+rural_plot_1_interact <- ggplotly(rural_plot_1, tooltip = "text") %>% layout(showlegend=FALSE)
+suppressMessages(rural_plot_1_interact)
 
-#consider removing outliers (40+) from rural counties
 ```
 
-```{r, echo=FALSE, warning=FALSE}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 rural_plot_2 <- ggplot(enviro_clean_rural, aes(x=rural, y=avg_poverty_co, fill=rural)) +
   geom_boxplot() +
-  labs(title = "Distribution of poverty by rural county status") 
+  labs(title = "Distribution of poverty by rural county status",
+       x = "",
+       y = "Average poverty (%)")+
+   scale_fill_manual(values = c("#69b3a2", "gold"))+
+  theme_bw()
 
-ggplotly(rural_plot_2, tooltip= "text")
+rural_plot_2_interact <- ggplotly(rural_plot_2, tooltip= "text") %>% layout(showlegend=FALSE)
+
+suppressMessages(rural_plot_2_interact)
 ```
 
+2.  **Box Plots - distribution of CES 4.0 scores and poverty by rural county status.**
 
-```{r, echo=FALSE, warning=FALSE}
-rural_plot_3 <- ggplot(data=enviro_clean_rural, aes(x=avg_ces_score_co, y= avg_poverty_co, color=rural, label=county))+
-  geom_point(aes(size=tot_pop))+
-  geom_smooth(formula=y~x, method="loess")+
-  theme_minimal()
+Next I looked at how these counties are distributed when you take into consideration their rural status. 41 of California's 58 counties are considered rural.
+
+The median values for CES 4.0 score did not differ greatly by rural status (23.71 non rural compared to 20.84 rural). The rural counties (41) had more observations and more outliers.
+
+However, there's a significant difference in distribution in terms of poverty. The median percentage of poverty in non-rural counties is 28.82% and much higher in rural counties at 35.63%.
+
+```{r, echo=FALSE, include=FALSE, warning=FALSE}
+lmodel <- lm(enviro_clean_rural$avg_poverty_co~ enviro_clean_rural$avg_ces_score_co)
+summary(lmodel)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+rural_plot_3 <- ggplot(data=enviro_clean_rural, 
+                       aes(
+                         x=avg_ces_score_co, 
+                         y= avg_poverty_co,
+                         text = paste("\nCounty:", county)))+
+  geom_point(aes(size=tot_pop, fill=rural), color="black")+
+  geom_smooth(aes(group=rural), color = "grey", se=FALSE)+
+  scale_fill_manual(values = c("#69b3a2", "gold"))+
+  labs(title = "CES 4.0 score and poverty (%) by rural county status",
+       x = "Average CES 4.0 score",
+       y = "Average poverty (%)")+
+  
+  theme_bw()
   
 #more difference among counties that are non-rural. there is less difference in rural areas ces scores across counties.
 
-ggplotly(rural_plot_3)
+
+ggplotly(rural_plot_3, tooltip="text") 
+
 ```
 
+Finally, I plotted the association between average CES 4.0 score and average percentage of population in poverty, considering rural status. This visualization illustrates well the rural-urban poverty divide. There are two distinct distributions here in terms of rural status.
+
+```{r, echo=FALSE, warning=FALSE, include=FALSE}
+
+ttest1 <- t.test(avg_ces_score_co ~ rural, data=enviro_clean_rural, var.equal=TRUE)
+ttest1
+#p-value = 0.1976, CI -1.7882, 8.4551
+```
+
+```{r, echo=FALSE, warning=FALSE, include=FALSE}
+
+ttest2 <- t.test(avg_poverty_co ~ rural, data=enviro_clean_rural, var.equal=TRUE)
+ttest2
+#statistically significant
+#p-value = 0.0257, CI -10.4708, -0.7028
+```
+
+### Data
+
+For these visualizations, I used the California Communities Environmental Health Screening Tool: CalEnviroScreen 4.0, which was released in October 2021. I created an indicator to categorize each census tract as located in a "rural" or "non rural" county, based on a list of California's 41 rural counties available at the Rural County Representatives of California website (<https://www.rcrcnet.org/counties>).
+
+### Conclusions & Limitations:
+
+-   There is a positive association between CES 4.0 score and percentage of population living in poverty by county in California.
+
+-   Comparing rural to non-rural counties, there's not a significant difference in average CES 4.0 scores, but there is a statistically significant difference in poverty levels, with rural counties experiencing more poverty.
+
+-   The association between CES 4.0 score and poverty is more pronounced in non urban counties with larger populations (e.g., Los Angeles county) at higher risk than smaller, non urban population.
+
+-   This is an ecological study so we should not make any inferences about causation.
+
+-   Analysis is by county and does not capture differences within each county by census tract.
+
+### References:
+
+-   OEHHA. (n.d.). *CalEnviroScreen 4.0*. oehha.ca.gov. <https://oehha.ca.gov/calenviroscreen/report/calenviroscreen-40> . Accessed March 29, 2024.
+
+-   Rural County Representatives of California. (n.d.). *Counties*. Rural Counties. <https://www.rcrcnet.org/counties> . Accessed March 29, 2024.
