@@ -185,3 +185,5 @@ For these visualizations, I used the California Communities Environmental Health
 -   OEHHA. (n.d.). *CalEnviroScreen 4.0*. oehha.ca.gov. <https://oehha.ca.gov/calenviroscreen/report/calenviroscreen-40> . Accessed March 29, 2024.
 
 -   Rural County Representatives of California. (n.d.). *Counties*. Rural Counties. <https://www.rcrcnet.org/counties> . Accessed March 29, 2024.
+
+-   Link to code: https://github.com/LyndsayM/calenviro_example
